@@ -6,6 +6,7 @@
 $pageTitle = 'Reservations';
 include ('header.php');
 require ('dbconn.php');
+include ('functions.php');
 		if (isset($_GET['date'])) {
 			if (preg_match("/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/",($_GET['date']))) {
 				$currentDay = ($_GET['date']);
@@ -33,11 +34,7 @@ $echo = "";
 	} else {
 		$date = trim($_POST['date']);
 	}
-	if (empty($_POST['name'])) {
-		$err[] = "You did not enter your name.";
-	} else {
-		$name = trim($_POST['name']);
-	}
+	
 	if (empty($_POST['email'])) {
 		$err[] = "You did not enter your email.";
 	} elseif (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) == false) {
@@ -50,11 +47,24 @@ $echo = "";
 	$timeOut = (float) $_POST['timeOut'];
 	$timeIn = (float)$_POST['timeIn'];
 	$priority = (int) $_POST['priority'];
+	$empId = $_POST['empId'];
 	//  $user = $_SERVER['AUTH_USER'];
 	if ($timeOut >= $timeIn) {
 		$err[] = "Your time in cannot be before or equal to your time out!";
 	}	
+	$eQuery = "SELECT  lastname, firstname, position, costcenter, providerID FROM employee_info WHERE employee = '$empId';";
+		$results = sqlsrv_query($conn, $eQuery, array(), array('Scrollable' => 'buffered'));
+		if (sqlsrv_num_rows($results) > 0) {
+			$row = sqlsrv_fetch_array($results);
+				$name = substr($row[1], 0, 5).' '.substr($row[0], 0, 5);
+				$position = $row[2];
+				$cost = $row[3];
+				$provider = $row[4];			
+		} else {
+			$err[] = "That Employee ID cannot be found in the database, Please try again or contact help desk if you believe this to be an error.";
+		}
 	
+
 	if (!empty($err)) {
 		Foreach($err as $m)
 		{
@@ -66,20 +76,11 @@ $echo = "";
 								$form .= '<label>*Date:</label> <br />';
 								$form .= '<input type="text" name="date" placeholder="YYYY-MM-DD" /><br />';
 								$form .= '<label>*Vehicle:</label><br />';
-									$form .= '<select name="vehicleId">';
-										$form .= '<option value="184">#184 \'13 Dodge Van Blue 052x488</option>';
-										$form .= '<option value="200">#200 \'16 Ford Fusion Blue 052x484</option>';
-										$form .= '<option value="202">#202 \'16 Ford Fusion Gray 052x469</option>';
-										$form .= '<option value="203">#203 \'16 Ford Fusion Silver 052x489</option>';
-										$form .= '<option value="204">#204 \'16 Ford Fusion Blue 052x499</option>';
-										$form .= '<option value="205">#205 \'16 Ford Fusion Black 052x494</option>';
-										$form .= '<option value="206">#206 \'16 Handicap Van Red 052x502</option>';
-										$form .= '<option value="208">#208 \'16 Ford Fusion Blue 052x467</option>';
-									$form .= '</select> <br />';
+									$form .= VehSelect($vehId);
 								$form .= '<label>*Name:</label> <br />';
-									$form .= '<input type="text" name="name" placeholder="First Name" /> <br />';
+									$form .= EmpSelect();
 								$form .= '<label>*Email:</label><br />';
-									$form .= '<input type="text" name="email" placeholder="first.last@mydomain.com"/>';
+									$form .= '<input type="text" name="email" placeholder="first.last@nlcmh.org"/>';
 							$form .= '</div>';
 							$form .= '<div style="float:left; display:block;width: 20%">';
 								$form .= '<label>*Time Out: </label><br />';
@@ -130,29 +131,40 @@ $echo = "";
 		if (sqlsrv_num_rows($checkResults) > 0) {
 			$echo = '<div style="width: 800px; margin-left:auto; margin-right:auto">';
 			$echo .= '<fieldset>';
-			$echo .= 'This vehicle appears to already be reserved.<br /> <a href="http://server/intranet/index.php?date='.$date.'">Click here</a> to go to Home view and see the availability. <br />';
-			$echo .= 'Or <a href="http://server/intranet/reserve.php">Click here</a> to re-enter your request.';
+			$echo .= 'This vehicle appears to already be reserved.<br /> <a href="http://server05116/Intranet/VehicleScheduler/index.php?date='.$date.'">Click here</a> to go to Home view and see the availability. <br />';
+			$echo .= 'Or <a href="http://server05116/Intranet/VehicleScheduler/reserve.php">Click here</a> to re-enter your request.';
 			$echo .= '</fieldset>';
 			$echo .= '</div>';			
 			//echo $echo;
 
 		} else {
-			$iQuery = "INSERT INTO Events (VehId, Date, StartTime, EndTime, Name, Email, PriorId, Active, Notes) Values ($vehicleId, '$date', $timeOut, $timeIn, '$name', '$email', $priority, 1, '$notes')"; // UserName '$user' 
-			if (sqlsrv_query($conn, $iQuery)) {
-				$echo = '<div style="width: 800px; margin-left:auto; margin-right:auto">';
-				$echo .= '<fieldset>';
-				$echo .= 'Your request has been made!<br /><a href="http://server/intranet/index.php?date='.$date.'">Click here</a> to go to Home view and see the availability.<br />';
-				$echo .= 'Or <a href="http://server/intranet/reserve.php">Click here</a> to reserve another vehicle for a different time and date.<br />';
-				$echo .= '</fieldset>';
-				$echo .= '</div>';			
-				//echo $echo;				
+			$aQuery = "SELECT Active FROM Vehicles WHERE VehId=$vehicleId;";
+			$results = sqlsrv_query($conn, $aQuery, array(), array('Scrollable' => 'buffered'));
+			$row = sqlsrv_fetch_array($results);
+			$active = $row[0];
+			if ($active == 1) {
+				$iQuery = "INSERT INTO Events (VehId, Date, StartTime, EndTime, Name, Email, PriorId, Active, Notes, EmpId, EmpPosition, CostCenter, ProviderID) 
+								Values ($vehicleId, '$date', $timeOut, $timeIn, '$name', '$email', $priority, 1, '$notes', '$empId', '$position', '$cost', '$provider')"; 
+				if (sqlsrv_query($conn, $iQuery)) {
+					$echo = '<div style="width: 800px; margin-left:auto; margin-right:auto">';
+					$echo .= '<fieldset>';
+					$echo .= 'Your request has been made!<br /><a href="http://server05116/Intranet/VehicleScheduler/index.php?date='.$date.'">Click here</a> to go to Home view and see the availability.<br />';
+					$echo .= 'Or <a href="http://server05116/Intranet/VehicleScheduler/reserve.php">Click here</a> to reserve another vehicle for a different time and date.<br />';
+					$echo .= '</fieldset>';
+					$echo .= '</div>';							
+				} else {
+					$echo = '<div style="width: 800px; margin-left:auto; margin-right:auto">';
+					$echo .= '<fieldset>';
+					$echo .= 'Something went wrong with the database connection. The reservation couldn\'t be inserted. <br /> Please inform IT or <a href="http://server05116/Intranet/VehicleScheduler/reserve.php">Click here</a> to re-enter your request.';
+					$echo .= '</fieldset>';
+					$echo .= '</div>';							
+				}
 			} else {
 				$echo = '<div style="width: 800px; margin-left:auto; margin-right:auto">';
 				$echo .= '<fieldset>';
-				$echo .= 'Something went wrong with the database connection.<br /> Please inform IT or <a href="http://server/intranet/reserve.php">Click here</a> to re-enter your request.';
+				$echo .= 'It appears this vehicle is blocked off for maintenance. <a href="http://server05116/Intranet/VehicleScheduler/reserve.php">Click here</a> to choose another vehicle.';
 				$echo .= '</fieldset>';
-				$echo .= '</div>';			
-				//echo $echo;				
+				$echo .= '</div>';
 			}
 		}
 	}
@@ -168,65 +180,11 @@ $echo = "";
 									$form .= '<input type="date" name="date" placeholder="YYYY-MM-DD" /><br />';
 								}
 						$form .= '<label>*Vehicle:</label><br />';
-								if ($vehId != ''){
-									$form .= '<select name="vehicleId">';
-										if ($vehId == 184) {
-											$form .= '<option selected value="184">#184 \'13 Dodge Van Blue 052x488</option>';
-										} else {
-											$form .= '<option value="184">#184 \'13 Dodge Van Blue 052x488</option>';
-										}
-										if ($vehId == 200) {
-											$form .= '<option selected value="200">#200 \'16 Ford Fusion Blue 052x484</option>';
-										} else {
-											$form .= '<option value="200">#200 \'16 Ford Fusion Blue 052x484</option>';
-										}
-										if ($vehId == 202) {
-											$form .= '<option selected value="202">#202 \'16 Ford Fusion Gray 052x469</option>';
-										} else {
-											$form .= '<option value="202">#202 \'16 Ford Fusion Gray 052x469</option>';
-										}
-										if ($vehId == 203) {
-											$form .= '<option selected value="203">#203 \'16 Ford Fusion Silver 052x489</option>';
-										} else {
-											$form .= '<option value="203">#203 \'16 Ford Fusion Silver 052x489</option>';
-										}
-										if ($vehId == 204) {
-											$form .= '<option selected value="204">#204 \'16 Ford Fusion Blue 052x499</option>';
-										} else {
-											$form .= '<option value="204">#204 \'16 Ford Fusion Blue 052x499</option>';
-										}	
-										if ($vehId == 205) {
-											$form .= '<option selected value="205">#205 \'16 Ford Fusion Black 052x494</option>';
-										} else {
-											$form .= '<option value="205">#205 \'16 Ford Fusion Black 052x494</option>';
-										}
-										if ($vehId == 206) {
-											$form .= '<option selected value="206">#206 \'16 Handicap Van Red 052x502</option>';
-										} else {
-											$form .= '<option value="206">#206 \'16 Handicap Van Red 052x502</option>';
-										}	
-										if ($vehId == 208) {
-											$form .= '<option selected value="208">#208 \'16 Ford Fusion Blue 052x467</option>';
-										} else {
-											$form .= '<option value="208">#208 \'16 Ford Fusion Blue 052x467</option>';
-										}			
-									$form .= '</select> <br />';
-								} else {
-									$form .= '<select name="vehicleId">';
-										$form .= '<option value="184">#184 \'13 Dodge Van Blue 052x488</option>';
-										$form .= '<option value="200">#200 \'16 Ford Fusion Blue 052x484</option>';
-										$form .= '<option value="202">#202 \'16 Ford Fusion Gray 052x469</option>';
-										$form .= '<option value="203">#203 \'16 Ford Fusion Silver 052x489</option>';
-										$form .= '<option value="204">#204 \'16 Ford Fusion Blue 052x499</option>';
-										$form .= '<option value="205">#205 \'16 Ford Fusion Black 052x494</option>';
-										$form .= '<option value="206">#206 \'16 Handicap Van Red 052x502</option>';
-										$form .= '<option value="208">#208 \'16 Ford Fusion Blue 052x467</option>';
-									$form .= '</select> <br />';
-								}
+						$form .= VehSelect($vehId);		
 						$form .= '<label>*Name:</label> <br />';
-							$form .= '<input type="text" name="name" placeholder="First Name" /> <br />';
+							$form .= EmpSelect();
 						$form .= '<label>*Email:</label><br />';
-							$form .= '<input type="text" name="email" placeholder="first.last@mydomain.com"/>';
+							$form .= '<input type="text" name="email" placeholder="first.last@nlcmh.org"/>';
 					$form .= '</div>';
 					$form .= '<div style="float:left; display:block;width: 20%">';
 						$form .= '<label>*Time Out: </label><br />';
@@ -285,9 +243,9 @@ $echo = "";
 		}
 ?>
 <br style="clear: right; clear: left;" />
-		<p>If you bump, an Email will be sent to the current registered user, as well as adminstration.<br />
+<!--		<p>If you bump, an Email will be sent to the current registered user, as well as adminstration.<br />
 		Bumping is based on Priority, you must have a higher priority than the current user.</p><br />
-		<p style="text-align: center"><b><i>BEFORE YOU BUMP SOMEONE, PLEASE CHECK WITH WAIVER TEAM FOR THEIR CAR.</i></b></p><br />
+		<p style="text-align: center"><b><i>BEFORE YOU BUMP SOMEONE, PLEASE CHECK WITH WAIVER TEAM FOR THEIR CAR.</i></b></p><br /> -->
 		<p>Waiver Team has a 2016 Ford Fusion. Contact Sherrie Moseler @ 54388 to check availability. <br />
 		ACT has ANOTHER 2016 Ford Fusion. Contact ACT for that availability, BEFORE bumping.<br />
 		Sign out cars on actual PLANNED usage and <u>not as a placeholder</u>. If plans change, contact help desk immediately. <br />

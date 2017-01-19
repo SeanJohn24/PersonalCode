@@ -6,12 +6,13 @@
 $pageTitle = 'Reservation Info';
 include ('header.php');
 require ('dbConn.php');
+include ('functions.php');
 // some variables to set for header links
 	if (isset($_GET['id'])) {
 		$resId = $_GET['id'];
 	} else {
 		echo 'There was an Error Accessing the database or due to a broken link. Please email IT<br />';
-		echo 'Please <a href="http://server/intranet/index.php">Click Here</a> to return to the availability page.';
+		echo 'Please <a href="http://server05116/Intranet/VehicleScheduler/index.php">Click Here</a> to return to the availability page.';
 	}
 
 	$iQuery = "SELECT Events.Date, Vehicles.VehDesc, Events.Name, Events.Email, Events.PriorId, Priority.[Desc], Events.Notes, Events.StartTime, Events.EndTime, Events.VehId
@@ -32,32 +33,8 @@ require ('dbConn.php');
 		$timeOut = $row[7];
 		$timeIn = $row[8];
 		$vehId = $row[9];
-			switch ($timeOut) {
-				case "8.00": $sTime = '8:00 AM'; break;case "8.5": $sTime = '8:30 AM'; break;
-				case "9.00": $sTime = '9:00 AM'; break;case "9.5": $sTime = '9:30 AM'; break;
-				case "10.00": $sTime = '10:00 AM'; break;case "10.5": $sTime = '10:30 AM'; break;
-				case "11.00": $sTime = '11:00 AM'; break;case "11.5": $sTime = '11:30 AM'; break;
-				case "12.00": $sTime = '12:00 PM'; break;case "12.5": $sTime = '12:30 PM'; break;
-				case "13.00": $sTime = '1:00 PM'; break;case "13.5": $sTime = '1:30 PM'; break;
-				case "14.00": $sTime = '2:00 PM'; break;case "14.5": $sTime = '2:30 PM'; break;
-				case "15.00": $sTime = '3:00 PM'; break;case "15.5": $sTime = '3:30 PM'; break;
-				case "16.00": $sTime = '4:00 PM'; break;case "16.5": $sTime = '4:30 PM'; break;
-				case "17.00": $sTime = '5:00 PM'; break;case "17.5": $sTime = '5:30 PM'; break;
-				default: $sTime = 'ERROR'; break;
-			} // Start Time conversion!
-			switch ($timeIn) {
-				case "8.00": $eTime = '8:00 AM'; break;case "8.5": $eTime = '8:30 AM'; break;
-				case "9.00": $eTime = '9:00 AM'; break;case "9.5": $eTime = '9:30 AM'; break;
-				case "10.00": $eTime = '10:00 AM'; break;case "10.5": $eTime = '10:30 AM'; break;
-				case "11.00": $eTime = '11:00 AM'; break;case "11.5": $eTime = '11:30 AM'; break;
-				case "12.00": $eTime = '12:00 PM'; break;case "12.5": $eTime = '12:30 PM'; break;
-				case "13.00": $eTime = '1:00 PM'; break;case "13.5": $eTime = '1:30 PM'; break;
-				case "14.00": $eTime = '2:00 PM'; break;case "14.5": $eTime = '2:30 PM'; break;
-				case "15.00": $eTime = '3:00 PM'; break;case "15.5": $eTime = '3:30 PM'; break;
-				case "16.00": $eTime = '4:00 PM'; break;case "16.5": $eTime = '4:30 PM'; break;
-				case "17.00": $eTime = '5:00 PM'; break;case "17.5": $eTime = '5:30 PM'; break;
-				default: $eTime = 'ERROR'; break;
-			} // End Time conversion!
+		$sTime = ConvertTime($timeOut);
+		$eTime = ConvertTime($timeIn);
 		$table = '<tr><td>Date:</td><td>'.$date.'</td></tr>';
 		$table .= '<tr><td>Assigned to:</td><td>'.$name.'</td></tr>';
 		$table .= '<tr><td>Email:</td><td>'.$email.'</td></tr>';
@@ -65,10 +42,10 @@ require ('dbConn.php');
 		$table .= '<tr><td>Priority:</td><td>'.$priorId.' : '.$priorDesc.'</td></tr>';
 		$table .= '<tr><td style="font-weight:normal; !Important;"><b>Time Out:</b> '.$sTime.'</td><td><b>Time In:</b> '.$eTime.'</td></tr>';
 		$table .= '<tr><td style="text-align: left; font-weight:normal;width:400px !Important;" colspan=2>Notes: <br />'.$notes.'</td></tr>';
-		$backToAvail = '<a href="http://server/intranet/index.php?date='.$date.'">Back</a>';
+		$backToAvail = '<a href="http://server05116/Intranet/VehicleScheduler/index.php?date='.$date.'">Back</a>';
 	} else {
 		echo 'There was an Error Accessing the database or due to a broken link. Please email IT<br />';
-		echo 'Please <a style="float:right" href="http://server/intranet/index.php">Click Here</a> to return to the availability page and try again!';
+		echo 'Please <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/index.php">Click Here</a> to return to the availability page and try again!';
 	}
 	
 	
@@ -82,7 +59,7 @@ require ('dbConn.php');
 		</table>
 		<fieldset>
 			<legend>Need to Bump this person?</legend>
-			<form action="http://server/intranet/handleBump.php" method="POST">
+			<form action="http://server05116/Intranet/VehicleScheduler/handleBump.php" method="POST">
 				<div style="float:left; display:block; width:48%">
 				<input type="hidden" type="text" name="oldId" value="<?php echo $resId ?>" />
 				<input type="hidden" type="text" name="vehId" value="<?php echo $vehId ?>" />
@@ -91,9 +68,9 @@ require ('dbConn.php');
 				<label>Date:</label>
 				<input readonly type="date" name="date" value="<?php echo $date ?>" /><br />
 				<label>*Your Name:</label>
-				<input type="text" name="name" value="" /><br />
+				<?php echo EmpSelect(); ?>
 				<label>*Your Email:</label>
-				<input type="text"placeholder="your.name@mydomain.com" name="email" value="" /><br />
+				<input type="text"placeholder="your.name@nlcmh.org" name="email" value="" /><br />
 				<label>*Time Out:</label>
 						<select name="timeOut">
 							<option value="8.00">8:00 AM</option><option value="8.5">8:30 AM</option>

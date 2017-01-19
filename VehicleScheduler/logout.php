@@ -24,6 +24,6 @@ if (ini_get("session.use_cookies")) {
 // Finally, destroy the session.
 session_destroy();
 
-	header('Location: http://server/intranet/index.php'); 
+	header('Location: http://server05116/Intranet/VehicleScheduler/index.php'); 
 	exit();
 ?>

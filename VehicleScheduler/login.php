@@ -23,10 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 		$results = sqlsrv_query($conn, $iQuery, array(), array('Scrollable' => 'buffered'));
 		
 		if (sqlsrv_num_rows($results) > 0) {
-			//echo "Your Username: $user and your hash: $pass";
 			session_start();
 			$_SESSION['Username']= $user;
-			header('Location: http://server/intranet/admin.php'); 
+			header('Location: http://server05116/Intranet/VehicleScheduler/adminMain.php'); 
 						exit();
 		} else {
 			$errors .= 'Your Username or Password did not match what we have on file. If you believe this a mistake contact helpdesk!';

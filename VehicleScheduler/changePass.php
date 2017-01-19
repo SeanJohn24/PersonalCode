@@ -9,7 +9,7 @@ require ('dbConn.php');
 					
 					session_start();
 					if (!isset($_SESSION['Username'])) {
-						header('Location: http://server/intranet/logout.php'); 
+						header('Location: http://server05116/Intranet/VehicleScheduler/logout.php'); 
 						exit();
 					} session_write_close();
 

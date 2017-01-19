@@ -6,12 +6,16 @@
 $pageTitle = 'Admin Change';
 include ('header.php');
 require ('dbConn.php');
+include ('functions.php');
 
 					session_start();
 					if (!isset($_SESSION['Username'])) {
-						header('Location: http://server/intranet/logout.php'); 
+						header('Location: http://server05116/Intranet/VehicleScheduler/logout.php'); 
 						exit();
-					} session_write_close();
+					} else {
+						$loggedIn = $_SESSION['Username'];
+					} 
+					session_write_close();
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST')  {
 	//Var_dump($_POST);
@@ -39,7 +43,7 @@ $resId = $_POST['resId'];
 				$notes = $row[6];
 				*/ 
 		} else {
-			$errors .= 'Couldn\'t connect to the database to grab required variables. Please inform help desk of this issue! <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+			$errors .= 'Couldn\'t connect to the database to grab required variables. Please inform help desk of this issue! <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 		}
 	}
 
@@ -64,9 +68,9 @@ $resId = $_POST['resId'];
 	}
 		
 	if ($cancel == 'Yes') {
-		$uQuery = "UPDATE Events SET Active = 0 WHERE Id = $resId;";
+		$uQuery = "UPDATE Events SET Active = 0, UserName='$loggedIn' WHERE Id = $resId;";
 		if (sqlsrv_query($conn, $uQuery)) {
-			$table = 'The Reservation has been cancelled. --> <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+			$table = 'The Reservation has been cancelled. --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 			{ // Handle Email in this block!
 				$message = 
 'Adminstration, at your request, has cancel the following reservation.
@@ -75,32 +79,36 @@ $resId = $_POST['resId'];
 		Date: '.$date.'
 		Vehicle: '.$vehDesc.'
 	If this was done by mistake please contact one of the following to correct this measure.
-		help.desk@mydomain.com!
+		Danielle.Ross@nlcmh.org,
+		melissa.bentgen@nlcmh.org,
+		Hilary.Rappuhn@nlcmh.org, 
+		Ellen.Walczak@nlcmh.org,
+		help.desk@nlcmh.org!
 						
 	Sincerly, 
 	Car Scheduler';		
 						ini_set('SMTP','1.2.3.13');
 						ini_set('smtp_port',25);
-						$to = $email.',help.desk@mydomain.com'; //
+						$to = $email.',help.desk@nlcmh.org,Danielle.Ross@nlcmh.org, melissa.bentgen@nlcmh.org, Hilary.Rappuhn@nlcmh.org, ellen.walczak@nlcmh.org'; //
 						$subject='Vehicle Reservation Cancelled!!';
-						$headers = 'From: notify@mydomain.com' . "\r\n" .
+						$headers = 'From: notify@nlcmh.org' . "\r\n" .
 						'X-Mailer: PHP/' . phpversion();
 						mail($to, $subject, $message, $headers);
 			}	
 		} else {
-			$errors .= 'There was an ISSUE cancelling the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+			$errors .= 'There was an ISSUE cancelling the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 		}
 	} elseif ($cancel == 'No' && $changeCheckIn != 'No' && $changeCheckOut != 'No') {
 		if ($timeOut >= $timeIn) {
-			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 		} else {
 			$checkQuery = "SELECT * FROM Events WHERE Active = 1 AND Date = '$date' AND VehId = $vehicleId AND ((StartTime BETWEEN $timeOut AND $timeIn) OR (EndTime BETWEEN $timeOut AND $timeIn)) AND Id <> $resId";
 			$checkResults = sqlsrv_query($conn, $checkQuery, array(), array('Scrollable' => 'buffered'));
 			if (sqlsrv_num_rows($checkResults) > 0) {
 				$errors .= 'Your new check out or check in time overlaps with another reservation. This edit cannot be made. Please click on home view to see the schedule. 
-							Or  go <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+							Or  go <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 			} else {
-				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn WHERE Id = $resId;";
+				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn, UserName='$loggedIn' WHERE Id = $resId;";
 				if (sqlsrv_query($conn, $uQuery)) {
 						$iQuery = "SELECT Events.Date, Vehicles.VehDesc, Events.Name, Events.Email, Events.PriorId, Priority.[Desc], Events.Notes, Events.StartTime, Events.EndTime, Events.VehId
 										FROM Events JOIN Vehicles ON Events.VehId = Vehicles.VehId
@@ -120,32 +128,8 @@ $resId = $_POST['resId'];
 							$timeOut = $row[7];
 							$timeIn = $row[8];
 							$vehId = $row[9];
-								switch ($timeOut) {
-									case "8.00": $sTime = '8:00 AM'; break;case "8.5": $sTime = '8:30 AM'; break;
-									case "9.00": $sTime = '9:00 AM'; break;case "9.5": $sTime = '9:30 AM'; break;
-									case "10.00": $sTime = '10:00 AM'; break;case "10.5": $sTime = '10:30 AM'; break;
-									case "11.00": $sTime = '11:00 AM'; break;case "11.5": $sTime = '11:30 AM'; break;
-									case "12.00": $sTime = '12:00 PM'; break;case "12.5": $sTime = '12:30 PM'; break;
-									case "13.00": $sTime = '1:00 PM'; break;case "13.5": $sTime = '1:30 PM'; break;
-									case "14.00": $sTime = '2:00 PM'; break;case "14.5": $sTime = '2:30 PM'; break;
-									case "15.00": $sTime = '3:00 PM'; break;case "15.5": $sTime = '3:30 PM'; break;
-									case "16.00": $sTime = '4:00 PM'; break;case "16.5": $sTime = '4:30 PM'; break;
-									case "17.00": $sTime = '5:00 PM'; break;case "17.5": $sTime = '5:30 PM'; break;
-									default: $sTime = 'ERROR'; break;
-								} // Start Time conversion!
-								switch ($timeIn) {
-									case "8.00": $eTime = '8:00 AM'; break;case "8.5": $eTime = '8:30 AM'; break;
-									case "9.00": $eTime = '9:00 AM'; break;case "9.5": $eTime = '9:30 AM'; break;
-									case "10.00": $eTime = '10:00 AM'; break;case "10.5": $eTime = '10:30 AM'; break;
-									case "11.00": $eTime = '11:00 AM'; break;case "11.5": $eTime = '11:30 AM'; break;
-									case "12.00": $eTime = '12:00 PM'; break;case "12.5": $eTime = '12:30 PM'; break;
-									case "13.00": $eTime = '1:00 PM'; break;case "13.5": $eTime = '1:30 PM'; break;
-									case "14.00": $eTime = '2:00 PM'; break;case "14.5": $eTime = '2:30 PM'; break;
-									case "15.00": $eTime = '3:00 PM'; break;case "15.5": $eTime = '3:30 PM'; break;
-									case "16.00": $eTime = '4:00 PM'; break;case "16.5": $eTime = '4:30 PM'; break;
-									case "17.00": $eTime = '5:00 PM'; break;case "17.5": $eTime = '5:30 PM'; break;
-									default: $eTime = 'ERROR'; break;
-								} // End Time conversion!
+							$sTime = ConvertTime($timeOut);
+							$eTime = ConvertTime($timeIn);
 							$table .= '<table class="Bravo">';	
 							$table .= '<tr><td>Date:</td><td>'.$date.'</td></tr>';
 							$table .= '<tr><td>Assigned to:</td><td>'.$name.'</td></tr>';
@@ -155,28 +139,28 @@ $resId = $_POST['resId'];
 							$table .= '<tr><td style="font-weight:normal; !Important;"><b>Time Out:</b> '.$sTime.'</td><td><b>Time In:</b> '.$eTime.'</td></tr>';
 							$table .= '<tr><td style="text-align: left; font-weight:normal;width:400px !Important;" colspan=2>Notes: <br />'.$notes.'</td></tr>';
 							$table .= '</table>';
-							$table .= '<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$table .= '<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 							
 						} else {
-							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 						}				
 					
 				} else {
-					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 				}
 			}
 		}
 	} elseif ($cancel == 'No' && $changeCheckIn == 'No' && $changeCheckOut != 'No' ) {
 		if ($timeOut >= $timeIn) {
-			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 		} else {
 			$checkQuery = "SELECT * FROM Events WHERE Active = 1 AND Date = '$date' AND VehId = $vehicleId AND ((StartTime BETWEEN $timeOut AND $timeIn) OR (EndTime BETWEEN $timeOut AND $timeIn)) AND Id <> $resId";
 			$checkResults = sqlsrv_query($conn, $checkQuery, array(), array('Scrollable' => 'buffered'));
 			if (sqlsrv_num_rows($checkResults) > 0) {
 				$errors .= 'Your new check out or check in time overlaps with another reservation. This edit cannot be made. Please click on home view to see the schedule. 
-							Or  go <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+							Or  go <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 			} else {
-				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn WHERE Id = $resId;";
+				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn, UserName='$loggedIn' WHERE Id = $resId;";
 				if (sqlsrv_query($conn, $uQuery)) {
 						$iQuery = "SELECT Events.Date, Vehicles.VehDesc, Events.Name, Events.Email, Events.PriorId, Priority.[Desc], Events.Notes, Events.StartTime, Events.EndTime, Events.VehId
 										FROM Events JOIN Vehicles ON Events.VehId = Vehicles.VehId
@@ -196,32 +180,8 @@ $resId = $_POST['resId'];
 							$timeOut = $row[7];
 							$timeIn = $row[8];
 							$vehId = $row[9];
-								switch ($timeOut) {
-									case "8.00": $sTime = '8:00 AM'; break;case "8.5": $sTime = '8:30 AM'; break;
-									case "9.00": $sTime = '9:00 AM'; break;case "9.5": $sTime = '9:30 AM'; break;
-									case "10.00": $sTime = '10:00 AM'; break;case "10.5": $sTime = '10:30 AM'; break;
-									case "11.00": $sTime = '11:00 AM'; break;case "11.5": $sTime = '11:30 AM'; break;
-									case "12.00": $sTime = '12:00 PM'; break;case "12.5": $sTime = '12:30 PM'; break;
-									case "13.00": $sTime = '1:00 PM'; break;case "13.5": $sTime = '1:30 PM'; break;
-									case "14.00": $sTime = '2:00 PM'; break;case "14.5": $sTime = '2:30 PM'; break;
-									case "15.00": $sTime = '3:00 PM'; break;case "15.5": $sTime = '3:30 PM'; break;
-									case "16.00": $sTime = '4:00 PM'; break;case "16.5": $sTime = '4:30 PM'; break;
-									case "17.00": $sTime = '5:00 PM'; break;case "17.5": $sTime = '5:30 PM'; break;
-									default: $sTime = 'ERROR'; break;
-								} // Start Time conversion!
-								switch ($timeIn) {
-									case "8.00": $eTime = '8:00 AM'; break;case "8.5": $eTime = '8:30 AM'; break;
-									case "9.00": $eTime = '9:00 AM'; break;case "9.5": $eTime = '9:30 AM'; break;
-									case "10.00": $eTime = '10:00 AM'; break;case "10.5": $eTime = '10:30 AM'; break;
-									case "11.00": $eTime = '11:00 AM'; break;case "11.5": $eTime = '11:30 AM'; break;
-									case "12.00": $eTime = '12:00 PM'; break;case "12.5": $eTime = '12:30 PM'; break;
-									case "13.00": $eTime = '1:00 PM'; break;case "13.5": $eTime = '1:30 PM'; break;
-									case "14.00": $eTime = '2:00 PM'; break;case "14.5": $eTime = '2:30 PM'; break;
-									case "15.00": $eTime = '3:00 PM'; break;case "15.5": $eTime = '3:30 PM'; break;
-									case "16.00": $eTime = '4:00 PM'; break;case "16.5": $eTime = '4:30 PM'; break;
-									case "17.00": $eTime = '5:00 PM'; break;case "17.5": $eTime = '5:30 PM'; break;
-									default: $eTime = 'ERROR'; break;
-								} // End Time conversion!
+							$sTime = ConvertTime($timeOut);
+							$eTime = ConvertTime($timeIn);
 							$table .= '<table class="Bravo">';	
 							$table .= '<tr><td>Date:</td><td>'.$date.'</td></tr>';
 							$table .= '<tr><td>Assigned to:</td><td>'.$name.'</td></tr>';
@@ -231,28 +191,28 @@ $resId = $_POST['resId'];
 							$table .= '<tr><td style="font-weight:normal; !Important;"><b>Time Out:</b> '.$sTime.'</td><td><b>Time In:</b> '.$eTime.'</td></tr>';
 							$table .= '<tr><td style="text-align: left; font-weight:normal;width:400px !Important;" colspan=2>Notes: <br />'.$notes.'</td></tr>';
 							$table .= '</table>';
-							$table .= '<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$table .= '<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 							
 						} else {
-							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 						}				
 					
 				} else {
-					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 				}
 			}
 		}		
 	} elseif ($cancel == 'No' && $changeCheckIn != 'No' && $changeCheckOut == 'No') {
 		if ($timeOut >= $timeIn) {
-			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+			$errors .= 'Your time in cannot be before or equal to your time out! --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 		} else {
 			$checkQuery = "SELECT * FROM Events WHERE Active = 1 AND Date = '$date' AND VehId = $vehicleId AND ((StartTime BETWEEN $timeOut AND $timeIn) OR (EndTime BETWEEN $timeOut AND $timeIn)) AND Id <> $resId";
 			$checkResults = sqlsrv_query($conn, $checkQuery, array(), array('Scrollable' => 'buffered'));
 			if (sqlsrv_num_rows($checkResults) > 0) {
 				$errors .= 'Your new check out or check in time overlaps with another reservation. This edit cannot be made. Please click on home view to see the schedule. 
-							Or  go <a style="float:right" href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>';
+							Or  go <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>';
 			} else {
-				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn WHERE Id = $resId;";
+				$uQuery = "UPDATE Events SET StartTime = $timeOut, EndTime = $timeIn, UserName='$loggedIn' WHERE Id = $resId;";
 				if (sqlsrv_query($conn, $uQuery)) {
 						$iQuery = "SELECT Events.Date, Vehicles.VehDesc, Events.Name, Events.Email, Events.PriorId, Priority.[Desc], Events.Notes, Events.StartTime, Events.EndTime, Events.VehId
 										FROM Events JOIN Vehicles ON Events.VehId = Vehicles.VehId
@@ -272,32 +232,8 @@ $resId = $_POST['resId'];
 							$timeOut = $row[7];
 							$timeIn = $row[8];
 							$vehId = $row[9];
-								switch ($timeOut) {
-									case "8.00": $sTime = '8:00 AM'; break;case "8.5": $sTime = '8:30 AM'; break;
-									case "9.00": $sTime = '9:00 AM'; break;case "9.5": $sTime = '9:30 AM'; break;
-									case "10.00": $sTime = '10:00 AM'; break;case "10.5": $sTime = '10:30 AM'; break;
-									case "11.00": $sTime = '11:00 AM'; break;case "11.5": $sTime = '11:30 AM'; break;
-									case "12.00": $sTime = '12:00 PM'; break;case "12.5": $sTime = '12:30 PM'; break;
-									case "13.00": $sTime = '1:00 PM'; break;case "13.5": $sTime = '1:30 PM'; break;
-									case "14.00": $sTime = '2:00 PM'; break;case "14.5": $sTime = '2:30 PM'; break;
-									case "15.00": $sTime = '3:00 PM'; break;case "15.5": $sTime = '3:30 PM'; break;
-									case "16.00": $sTime = '4:00 PM'; break;case "16.5": $sTime = '4:30 PM'; break;
-									case "17.00": $sTime = '5:00 PM'; break;case "17.5": $sTime = '5:30 PM'; break;
-									default: $sTime = 'ERROR'; break;
-								} // Start Time conversion!
-								switch ($timeIn) {
-									case "8.00": $eTime = '8:00 AM'; break;case "8.5": $eTime = '8:30 AM'; break;
-									case "9.00": $eTime = '9:00 AM'; break;case "9.5": $eTime = '9:30 AM'; break;
-									case "10.00": $eTime = '10:00 AM'; break;case "10.5": $eTime = '10:30 AM'; break;
-									case "11.00": $eTime = '11:00 AM'; break;case "11.5": $eTime = '11:30 AM'; break;
-									case "12.00": $eTime = '12:00 PM'; break;case "12.5": $eTime = '12:30 PM'; break;
-									case "13.00": $eTime = '1:00 PM'; break;case "13.5": $eTime = '1:30 PM'; break;
-									case "14.00": $eTime = '2:00 PM'; break;case "14.5": $eTime = '2:30 PM'; break;
-									case "15.00": $eTime = '3:00 PM'; break;case "15.5": $eTime = '3:30 PM'; break;
-									case "16.00": $eTime = '4:00 PM'; break;case "16.5": $eTime = '4:30 PM'; break;
-									case "17.00": $eTime = '5:00 PM'; break;case "17.5": $eTime = '5:30 PM'; break;
-									default: $eTime = 'ERROR'; break;
-								} // End Time conversion!
+							$sTime = ConvertTime($timeOut);
+							$eTime = ConvertTime($timeIn);
 							$table .= '<table class="Bravo">';	
 							$table .= '<tr><td>Date:</td><td>'.$date.'</td></tr>';
 							$table .= '<tr><td>Assigned to:</td><td>'.$name.'</td></tr>';
@@ -307,24 +243,24 @@ $resId = $_POST['resId'];
 							$table .= '<tr><td style="font-weight:normal; !Important;"><b>Time Out:</b> '.$sTime.'</td><td><b>Time In:</b> '.$eTime.'</td></tr>';
 							$table .= '<tr><td style="text-align: left; font-weight:normal;width:400px !Important;" colspan=2>Notes: <br />'.$notes.'</td></tr>';
 							$table .= '</table>';
-							$table .= '<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$table .= '<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 							
 						} else {
-							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+							$errors .= 'There was an ISSUE getting the edited reservation data from the database. Please notify help desk.<a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 						}				
 					
 				} else {
-					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+					$errors .= 'There was an ISSUE with the database updating the reservation. Please notify help desk so that it can be investigated. --> <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 				}
 			}
 		}
 	} elseif ($cancel == 'No' && $changeCheckIn == 'No' && $changeCheckOut == 'No') {
-		$errors .= 'You have to make a selection before hitting submit. Please go <a href="http://server/intranet/adminEdit.php?id='.$resId.'">Back</a>!';
+		$errors .= 'You have to make a selection before hitting submit. Please go <a href="http://server05116/Intranet/VehicleScheduler/adminEdit.php?id='.$resId.'">Back</a>!';
 	} else {
-		$errors .= 'Data selection error, Please report this to help.desk! <a style="float:right" href="http://server/intranet/admin.php">Admin Home</a>';
+		$errors .= 'Data selection error, Please report this to help.desk! <a style="float:right" href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>';
 	}	
 } else {
-	$errors = 'You navigated to this page by error! Please click <a href="http://server/intranet/admin.php">Admin Home</a>!';
+	$errors = 'You navigated to this page by error! Please click <a href="http://server05116/Intranet/VehicleScheduler/admin.php">Admin Home</a>!';
 }
 ?>
 <div style="width: 1024px; margin-left:auto; margin-right:auto">

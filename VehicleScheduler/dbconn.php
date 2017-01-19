@@ -3,8 +3,8 @@
 * Shane Workman : Vehicle Scheduler
 * 10/27/2016
 ********************************/
-$serverName = "SERVER\SQLEXPRESS"; //serverName\Instance
-$connectionInfo = array( "Database"=>"database", "UID"=>"user", "PWD"=>"password");
+$serverName = "SERVER05116\SQLEXPRESS"; //serverName\instanceName // 1.2.3.16
+$connectionInfo = array( "Database"=>"CarScheduler", "UID"=>"phpUser", "PWD"=>"THAT1psw");
 $conn = sqlsrv_connect( $serverName, $connectionInfo);
 
 if(!$conn) {
