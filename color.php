@@ -4,8 +4,6 @@
   *Date: 06/15/2017
   *Purpose: Fun page randomizing color squares on the screen;
   **************************/
-  $page_title = "Random Color Squares";
-  //include("header.php");
   $colors = array("red", "orange", "yellow", "green", "blue", "indigo", "violet");
   $newYears = array("gold", "black", "silver");
   $christmas = array("red", "green", "white");
@@ -26,19 +24,14 @@
 
     if ($date == 01){
       myRandom($newYears);
-      //print($date.' 1');
     } elseif ($date >= 5 && $date <= 9 ) {
       myRandom($summer);
-      //print($date.' 2');
     } elseif ($date == 10) {
       myRandom($holloween);
-      //print($date.' 3');
     } elseif ($date == 12) {
       myRandom($christmas);
-      //print($date.' 4');
     } else {
       myRandom($colors);
-      //print($date.' 5');
     }
 ?>
 <script> setTimeout(function() {        location.reload();        }, 300); </script>
